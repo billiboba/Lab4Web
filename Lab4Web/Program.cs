@@ -15,10 +15,17 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<LibraryContext>();
-    dbContext.Database.Migrate(); // Применяет все миграции, если они есть
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryContext>();
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Migration error: {ex.Message}");
+    }
 }
-// Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

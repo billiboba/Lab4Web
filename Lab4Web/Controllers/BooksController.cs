@@ -16,17 +16,6 @@ namespace Lab4Web.Controllers
             _libraryContext = libraryContext;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<Book>> GetBookById(int id)
-        {
-            var book = await _libraryContext.Books.FindAsync(id);
-            if(book == null)
-            {
-                return NotFound();
-            }
-            return book;
-        }
-
         [HttpPost]
         public async Task<ActionResult<Book>> AddBook(Book book)
         {
@@ -43,12 +32,12 @@ namespace Lab4Web.Controllers
         [HttpPut("id")]
         public async Task<ActionResult<Book>> EditBook(int id, Book updateBook)
         {
-            if(id != updateBook.Id)
+            if (id != updateBook.Id)
             {
                 return BadRequest("id книги не совпадает");
             }
             var book = _libraryContext.Books.Find(id);
-            if(book == null)
+            if (book == null)
             {
                 return NotFound();
             }
@@ -67,13 +56,46 @@ namespace Lab4Web.Controllers
         public async Task<ActionResult<Book>> DeleteBook(int id)
         {
             var book = await _libraryContext.Books.FindAsync(id);
-            if(book == null )
+            if (book == null)
             {
                 return NotFound();
             }
             _libraryContext.Books.Remove(book);
             await _libraryContext.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<Book>> GetBookById(int id)
+        {
+            var book = await _libraryContext.Books.FindAsync(id);
+            if(book == null)
+            {
+                return NotFound();
+            }
+            return book;
+        }
+
+        [HttpGet("borrowed")]
+        public async Task<ActionResult<IEnumerable<Book>>> GetBorrowedBooks()
+        {
+            var borrowedBooks = await _libraryContext.BorrowedBooks.Where(bb=>bb.ReturnDate == null)
+                .Select(bb => new
+                {
+                    bb.Book,
+                    bb.Reader,
+                    BorrowedBook = bb.BorrowedDate
+                }).ToListAsync();
+            return Ok(borrowedBooks);
+        }
+
+        [HttpGet("available")]
+        public async Task<ActionResult<IEnumerable<Book>>> GetAvailableBooks()
+        {
+            var availableBooks = await _libraryContext.Books
+                .Where(b => b.Count > 0 && !_libraryContext.BorrowedBooks.Any(bb => bb.BookId == b.Id && bb.ReturnDate == null))
+                .ToListAsync();
+            return Ok(availableBooks);
         }
 
         [HttpGet("search")]
@@ -90,6 +112,5 @@ namespace Lab4Web.Controllers
 
             return books.Any() ? Ok(books) : NotFound("Книги не найдены.");
         }
-
     }
 }
