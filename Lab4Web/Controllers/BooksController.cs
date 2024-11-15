@@ -30,13 +30,13 @@ namespace Lab4Web.Controllers
         }
 
         [HttpPut("id")]
-        public async Task<ActionResult<Book>> EditBook(int id, Book updateBook)
+        public async Task<IActionResult> EditBook(int id, Book updateBook)
         {
             if (id != updateBook.Id)
             {
                 return BadRequest("id книги не совпадает");
             }
-            var book = _libraryContext.Books.Find(id);
+            var book = await _libraryContext.Books.FindAsync(id);
             if (book == null)
             {
                 return NotFound();
@@ -53,7 +53,7 @@ namespace Lab4Web.Controllers
         }
 
         [HttpDelete("id")]
-        public async Task<ActionResult<Book>> DeleteBook(int id)
+        public async Task<ActionResult> DeleteBook(int id)
         {
             var book = await _libraryContext.Books.FindAsync(id);
             if (book == null)

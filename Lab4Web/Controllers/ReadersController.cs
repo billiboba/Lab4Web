@@ -56,7 +56,7 @@ namespace Lab4Web.Controllers
         }
 
         [HttpDelete("id")]
-        public async Task<ActionResult<Reader>> DeleteById(int id)
+        public async Task<ActionResult> DeleteById(int id)
         {
             var reader = await _libraryContext.Readers.FindAsync(id);
             if (reader == null)
