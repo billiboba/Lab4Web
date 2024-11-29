@@ -110,7 +110,6 @@ namespace TestProject1
         [Fact]
         public async Task AddReader_ReturnsBadRequest_WhenNameIsEmpty()
         {
-            // Arrange: создаем тестовый контекст
             var options = GetInMemoryOptions();
             using var context = new LibraryContext(options);
 
@@ -118,34 +117,73 @@ namespace TestProject1
 
             var newReader = new Reader
             {
-                Name = "", // Имя пустое
+                Name = "", 
                 LastName = "Корнеев",
                 MiddleName = "Александрович",
                 DayOfBirthday = new DateTime(2003, 11, 19)
             };
 
-            // Act: вызываем метод контроллера
             var result = await controller.AddReader(newReader);
 
-            // Assert: проверяем результат
             var actionResult = Assert.IsType<ActionResult<Reader>>(result);
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
 
-            // Проверяем сообщение об ошибке
             Assert.Equal("Данные некорректны", badRequestResult.Value);
 
-            // Убедимся, что объект не был добавлен в базу данных
             var savedReader = await context.Readers.FirstOrDefaultAsync(r => r.LastName == "Корнеев");
             Assert.Null(savedReader);
         }
+        [Fact]
+        public async Task EditById_ValidId_ReturnsNoContent()
+        {
+            using var context = CreateTestContext();
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe", 
+                MiddleName = "Smith"
+            };
+            context.Readers.Add(reader);
+            context.SaveChanges();
+
+            var updatedReader = new Reader
+            {
+                Id = 1,
+                Name = "John Updated",
+                LastName = "Doe", 
+                MiddleName = "Smith" 
+            };
+
+            var controller = new ReadersController(context);
+
+            var result = await controller.EditById(1, updatedReader);
+
+            Assert.IsType<NoContentResult>(result.Result);
+        }
 
 
+        [Fact]
+        public async Task EditById_InvalidId_ReturnsBadRequest()
+        {
+            using var context = CreateTestContext();
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe",
+                MiddleName = "Smith" 
+            };
+            context.Readers.Add(reader);
+            context.SaveChanges();
 
+            var controller = new ReadersController(context);
 
+            var result = await controller.EditById(2, reader);
 
-
-
-
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.Equal("id не совпадают", badRequestResult.Value);
+        }
 
         [Fact]
         public async Task BorrowBook_ShouldReturnOk_WhenBookIsSuccessfullyBorrowed()
@@ -164,5 +202,160 @@ namespace TestProject1
             var actionResult = Assert.IsType<OkObjectResult>(result);
             Assert.Equal("книга выдана читателю", actionResult.Value);
         }
+        [Fact]
+        public async Task BorrowBook_ValidData_ReturnsOk()
+        {
+            using var context = CreateTestContext();
+
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe", 
+                MiddleName = "Smith"
+            };
+
+            var book = new Book
+            {
+                Id = 1,
+                Title = "C# Programming",
+                Article = "123-ABC", 
+                Author = "Author Name",
+                Count = 1
+            };
+
+            context.Readers.Add(reader);
+            context.Books.Add(book);
+            context.SaveChanges();
+
+            var controller = new ReadersController(context);
+
+            var result = await controller.BorrowBook(1, 1);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("книга выдана читателю", okResult.Value);
+        }
+
+        [Fact]
+        public async Task BorrowBook_NoAvailableBooks_ReturnsBadRequest()
+        {
+            using var context = CreateTestContext();
+
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe", 
+                MiddleName = "Smith"
+            };
+
+            var book = new Book
+            {
+                Id = 1,
+                Title = "C# Programming",
+                Article = "123-ABC", 
+                Author = "Author Name", 
+                Count = 0 
+            };
+
+            context.Readers.Add(reader);
+            context.Books.Add(book);
+            context.SaveChanges();
+
+            var controller = new ReadersController(context);
+
+            var result = await controller.BorrowBook(1, 1);
+
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Нет доступных книг", badRequestResult.Value);
+        }
+        [Fact]
+        public async Task ReturnBook_ValidData_ReturnsOk()
+        {
+            // Arrange
+            using var context = CreateTestContext();
+
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe", // Обязательное поле
+                MiddleName = "Smith" // Обязательное поле
+            };
+
+            var book = new Book
+            {
+                Id = 1,
+                Title = "C# Programming",
+                Article = "123-ABC", // Обязательное поле
+                Author = "Author Name", // Обязательное поле
+                Count = 0 // Количество доступных книг
+            };
+
+            var borrowedBook = new BorrowedBook
+            {
+                ReaderId = 1,
+                BookId = 1,
+                BorrowedDate = DateTime.Now,
+                ReturnDate = null
+            };
+
+            context.Readers.Add(reader);
+            context.Books.Add(book);
+            context.BorrowedBooks.Add(borrowedBook);
+            context.SaveChanges();
+
+            var controller = new ReadersController(context);
+
+            // Act
+            var result = await controller.ReturnBook(1, 1);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("Книга добавлена обратно в библиотеку", okResult.Value);
+        }
+
+
+        [Fact]
+        public async Task ReturnBook_NoBorrowedBook_ReturnsNotFound()
+        {
+            // Arrange
+            using var context = CreateTestContext();
+
+            var reader = new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe", // Обязательное поле
+                MiddleName = "Smith" // Обязательное поле
+            };
+
+            var book = new Book
+            {
+                Id = 1,
+                Title = "C# Programming",
+                Article = "123-ABC", // Обязательное поле
+                Author = "Author Name", // Обязательное поле
+                Count = 1
+            };
+
+            context.Readers.Add(reader);
+            context.Books.Add(book);
+            context.SaveChanges();
+
+            var controller = new ReadersController(context);
+
+            // Act
+            var result = await controller.ReturnBook(1, 1);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("Книга не была выдана или уже возвращена", notFoundResult.Value);
+        }
+
+
+
+
+
     }
 }

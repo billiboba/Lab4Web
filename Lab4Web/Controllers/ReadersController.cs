@@ -81,7 +81,7 @@ namespace Lab4Web.Controllers
             {
                 return NotFound("Не найдена книга");
             }
-            if (book.Count < 0)
+            if (book.Count <= 0)
             {
                 return BadRequest("Нет доступных книг");
             }
