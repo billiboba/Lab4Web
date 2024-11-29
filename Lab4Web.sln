@@ -5,12 +5,9 @@ VisualStudioVersion = 17.6.33712.159
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lab4Web", "Lab4Web\Lab4Web.csproj", "{1344DECE-0582-43BD-8F31-E312DDAF95D5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestProject1", "TestProject1\TestProject1.csproj", "{39259249-17C2-409C-B868-FD200019690D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReaderTests", "TestProject1\ReaderTests.csproj", "{39259249-17C2-409C-B868-FD200019690D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BooksTests", "BooksTests\BooksTests.csproj", "{D5CDB7E0-2242-44E6-A892-4741F32E1AE2}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1344DECE-0582-43BD-8F31-E312DDAF95D5} = {1344DECE-0582-43BD-8F31-E312DDAF95D5}
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BooksTests", "BooksTests\BooksTests.csproj", "{D5CDB7E0-2242-44E6-A892-4741F32E1AE2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

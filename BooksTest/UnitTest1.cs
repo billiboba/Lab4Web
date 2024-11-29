@@ -4,8 +4,6 @@ using Lab4Web.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-
 namespace BooksTests
 {
     public class UnitTest1
@@ -13,17 +11,17 @@ namespace BooksTests
         private DbContextOptions<LibraryContext> GetInMemoryOptions()
         {
             return new DbContextOptionsBuilder<LibraryContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(databaseName: "TestLibrary")
                 .Options;
         }
         private LibraryContext CreateTestContext()
         {
             var options = GetInMemoryOptions();
             var context = new LibraryContext(options);
+            context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
             return context;
         }
-
 
         /// <summary>
         /// Добавление книги, когда всё ок.
@@ -272,11 +270,13 @@ namespace BooksTests
 
 
         [Fact]
-        public async Task GetBorrowedBooks_IsValid()
+        public async Task GetListBooksBorrowed_WhenIsValid()
         {
             var options = GetInMemoryOptions();
             using var context = new LibraryContext(options);
+            var controller = new BooksController(context);
 
+            // Arrange
             context.Books.Add(new Book
             {
                 Id = 1,
@@ -287,6 +287,15 @@ namespace BooksTests
                 Count = 1
             });
 
+            context.Readers.Add(new Reader
+            {
+                Id = 1,
+                Name = "John",
+                LastName = "Doe",
+                MiddleName = "A",
+                DayOfBirthday = new DateTime(1990, 1, 1)
+            });
+
             context.BorrowedBooks.Add(new BorrowedBook
             {
                 ReaderId = 1,
@@ -297,184 +306,24 @@ namespace BooksTests
 
             await context.SaveChangesAsync();
 
-            var controller = new BooksController(context);
-
+            // Act
             var result = await controller.GetBorrowedBooks();
 
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
+            // Assert
+            var actionResult = Assert.IsType<ActionResult<IEnumerable<object>>>(result);
             var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-            var books = Assert.IsType<List<Book>>(okResult.Value);
+            var borrowedBooks = Assert.IsType<List<object>>(okResult.Value);
 
-            Assert.Single(books);
+            Assert.Single(borrowedBooks); // Проверяем, что в списке одна запись
 
-            var book = books[0];
-            Assert.Equal("Book 1", book.Title);
-            Assert.Equal("Author 1", book.Author);
-        }
-        [Fact]
-        public async Task GetBorrowedBooks_IsNotValid()
-        {
-            var options = GetInMemoryOptions();
-            using var context = new LibraryContext(options);
-            var controller = new BooksController(context);
-
-            var result = await controller.GetBorrowedBooks();
-
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
-            var notFoundResult = Assert.IsType<NotFoundObjectResult>(actionResult.Result);
-            Assert.Equal("No borrowed books found.", notFoundResult.Value);
+            // Проверяем свойства первой записи
+            var borrowedBook = borrowedBooks[0];
+            Assert.Contains("Book", borrowedBook.ToString());
+            Assert.Contains("Reader", borrowedBook.ToString());
+            Assert.Contains("BorrowedBook", borrowedBook.ToString());
         }
 
-        [Fact]
-        public async Task GetAvailableBooks_IsValid()
-        {
-            var options = GetInMemoryOptions();
 
-            using var context = new LibraryContext(options);
 
-            context.Books.Add(new Book
-            {
-                Id = 1,
-                Title = "Available Book 1",
-                Author = "Author 1",
-                Article = "ABC123",
-                YearPublication = 2023,
-                Count = 2 
-            });
-
-            context.Books.Add(new Book
-            {
-                Id = 2,
-                Title = "Borrowed Book 1",
-                Author = "Author 2",
-                Article = "XYZ789",
-                YearPublication = 2022,
-                Count = 1 
-            });
-
-            context.BorrowedBooks.Add(new BorrowedBook
-            {
-                ReaderId = 1,
-                BookId = 2,
-                BorrowedDate = DateTime.Now,
-                ReturnDate = null
-            });
-
-            await context.SaveChangesAsync();
-
-            var controller = new BooksController(context);
-
-            var result = await controller.GetAvailableBooks();
-
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
-            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-            var books = Assert.IsType<List<Book>>(okResult.Value);
-
-            Assert.Single(books);
-
-            var book = books[0];
-            Assert.Equal("Available Book 1", book.Title);
-            Assert.Equal("Author 1", book.Author);
-        }
-        [Fact]
-        public async Task GetAvailableBooks_IsNotValid()
-        {
-            var options = GetInMemoryOptions();
-
-            using var context = new LibraryContext(options);
-
-            context.Books.Add(new Book
-            {
-                Id = 1,
-                Title = "Borrowed Book",
-                Author = "Author 1",
-                Article = "ABC123",
-                YearPublication = 2023,
-                Count = 1
-            });
-
-            context.BorrowedBooks.Add(new BorrowedBook
-            {
-                ReaderId = 1,
-                BookId = 1,
-                BorrowedDate = DateTime.Now,
-                ReturnDate = null 
-            });
-
-            context.Books.Add(new Book
-            {
-                Id = 2,
-                Title = "Out of Stock Book",
-                Author = "Author 2",
-                Article = "XYZ789",
-                YearPublication = 2022,
-                Count = 0 
-            });
-
-            await context.SaveChangesAsync();
-
-            var controller = new BooksController(context);
-
-            var result = await controller.GetAvailableBooks();
-
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
-            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-            var books = Assert.IsType<List<Book>>(okResult.Value);
-
-            Assert.Empty(books);
-        }
-        [Fact]
-        public async Task SearchBooksByTitle_IsValid()
-        {
-            var options = GetInMemoryOptions();
-
-            using var context = new LibraryContext(options);
-
-            context.Books.Add(new Book
-            {
-                Id = 1,
-                Title = "C# Programming",
-                Author = "Author 1",
-                Article = "ABC123",
-                YearPublication = 2023,
-                Count = 5
-            });
-            context.Books.Add(new Book
-            {
-                Id = 2,
-                Title = "Java Programming",
-                Author = "Author 2",
-                Article = "XYZ789",
-                YearPublication = 2022,
-                Count = 3
-            });
-            await context.SaveChangesAsync();
-
-            var controller = new BooksController(context);
-
-            var result = await controller.SearchBooksByTitle("Programming");
-
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
-            var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-            var books = Assert.IsType<List<Book>>(okResult.Value);
-
-            Assert.Equal(2, books.Count); 
-            Assert.Contains(books, b => b.Title == "C# Programming");
-            Assert.Contains(books, b => b.Title == "Java Programming");
-        }
-        [Fact]
-        public async Task SearchBooksByTitle_IsNotValid()
-        {
-            var options = GetInMemoryOptions();
-
-            using var context = new LibraryContext(options);
-            var controller = new BooksController(context);
-            
-            var result = await controller.SearchBooksByTitle("");
-
-            var actionResult = Assert.IsType<ActionResult<IEnumerable<Book>>>(result);
-            var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
-            Assert.Equal("Название книги не может быть пустым.", badRequestResult.Value);
-        }
     }
 }

@@ -27,7 +27,5 @@ namespace Lab4Web.Data
                 .WithMany()
                 .HasForeignKey(bb => bb.BookId);
         }
-
     }
-
 }

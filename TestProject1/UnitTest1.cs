@@ -12,36 +12,17 @@ namespace TestProject1
         private DbContextOptions<LibraryContext> GetInMemoryOptions()
         {
             return new DbContextOptionsBuilder<LibraryContext>()
-                .UseInMemoryDatabase(databaseName: "TestLibrary")
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
         }
         private LibraryContext CreateTestContext()
         {
             var options = GetInMemoryOptions();
             var context = new LibraryContext(options);
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated(); 
+            context.Database.EnsureCreated();
             return context;
         }
 
-       
-        [Fact]
-        public async Task BorrowBook_ShouldReturnOk_WhenBookIsSuccessfullyBorrowed()
-        {
-            var options = GetInMemoryOptions();
-
-            using var context = new LibraryContext(options);
-            context.Readers.Add(new Reader { Name = "Роман", LastName = "Корнеев", MiddleName = "Александрович", DayOfBirthday = new DateTime(1995, 5, 15) });
-            context.Books.Add(new Book { Title = "C# для начинающих", Count = 1, Article = "ABC123", Author = "billiboba", YearPublication = 1999 });
-            await context.SaveChangesAsync();
-
-            var controller = new ReadersController(context);
-
-            var result = await controller.BorrowBook(1, 1);
-
-            var actionResult = Assert.IsType<OkObjectResult>(result);
-            Assert.Equal("книга выдана читателю", actionResult.Value);
-        }
 
         /// <summary>
         /// Проверка на удаление читателя. Если читатель существует.
@@ -90,6 +71,98 @@ namespace TestProject1
             var result = await controller.DeleteById(11);
             Assert.IsType<NotFoundResult>(result);
            
+        }
+
+        [Fact]
+        public async Task AddReader_IsValid()
+        {
+            var options = GetInMemoryOptions();
+            using var context = new LibraryContext(options);
+
+            var controller = new ReadersController(context);
+
+            var newReader = new Reader
+            {
+                Name = "Роман",
+                LastName = "Корнеев",
+                MiddleName = "Александрович",
+                DayOfBirthday = new DateTime(2003, 11, 19)
+            };
+
+            var result = await controller.AddReader(newReader);
+
+            var actionResult = Assert.IsType<ActionResult<Reader>>(result);
+            var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+            var addedReader = Assert.IsType<Reader>(createdAtActionResult.Value);
+
+            Assert.Equal("Роман", addedReader.Name);
+            Assert.Equal("Корнеев", addedReader.LastName);
+            Assert.Equal("Александрович", addedReader.MiddleName);
+            Assert.Equal(new DateTime(2003, 11, 19), addedReader.DayOfBirthday);
+
+            var savedReader = await context.Readers.FirstOrDefaultAsync(r => r.Id == addedReader.Id);
+            Assert.NotNull(savedReader);
+            Assert.Equal("Роман", savedReader.Name);
+            Assert.Equal("Корнеев", savedReader.LastName);
+            Assert.Equal("Александрович", savedReader.MiddleName);
+            Assert.Equal(new DateTime(2003, 11, 19), savedReader.DayOfBirthday);
+        }
+        [Fact]
+        public async Task AddReader_ReturnsBadRequest_WhenNameIsEmpty()
+        {
+            // Arrange: создаем тестовый контекст
+            var options = GetInMemoryOptions();
+            using var context = new LibraryContext(options);
+
+            var controller = new ReadersController(context);
+
+            var newReader = new Reader
+            {
+                Name = "", // Имя пустое
+                LastName = "Корнеев",
+                MiddleName = "Александрович",
+                DayOfBirthday = new DateTime(2003, 11, 19)
+            };
+
+            // Act: вызываем метод контроллера
+            var result = await controller.AddReader(newReader);
+
+            // Assert: проверяем результат
+            var actionResult = Assert.IsType<ActionResult<Reader>>(result);
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+
+            // Проверяем сообщение об ошибке
+            Assert.Equal("Данные некорректны", badRequestResult.Value);
+
+            // Убедимся, что объект не был добавлен в базу данных
+            var savedReader = await context.Readers.FirstOrDefaultAsync(r => r.LastName == "Корнеев");
+            Assert.Null(savedReader);
+        }
+
+
+
+
+
+
+
+
+
+        [Fact]
+        public async Task BorrowBook_ShouldReturnOk_WhenBookIsSuccessfullyBorrowed()
+        {
+            var options = GetInMemoryOptions();
+
+            using var context = new LibraryContext(options);
+            context.Readers.Add(new Reader { Name = "Роман", LastName = "Корнеев", MiddleName = "Александрович", DayOfBirthday = new DateTime(1995, 5, 15) });
+            context.Books.Add(new Book { Title = "C# для начинающих", Count = 1, Article = "ABC123", Author = "billiboba", YearPublication = 1999 });
+            await context.SaveChangesAsync();
+
+            var controller = new ReadersController(context);
+
+            var result = await controller.BorrowBook(1, 1);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("книга выдана читателю", actionResult.Value);
         }
     }
 }

@@ -79,15 +79,17 @@ namespace Lab4Web.Controllers
         [HttpGet("borrowed")]
         public async Task<ActionResult<IEnumerable<Book>>> GetBorrowedBooks()
         {
-            var borrowedBooks = await _libraryContext.BorrowedBooks.Where(bb=>bb.ReturnDate == null)
-                .Select(bb => new
-                {
-                    bb.Book,
-                    bb.Reader,
-                    BorrowedBook = bb.BorrowedDate
-                }).ToListAsync();
+            var borrowedBooks = await _libraryContext.BorrowedBooks
+                .Where(bb => bb.ReturnDate == null) 
+                .Select(bb => bb.Book) 
+                .ToListAsync();
+            if (!borrowedBooks.Any())
+            {
+                return NotFound("No borrowed books found.");
+            }
             return Ok(borrowedBooks);
         }
+
 
         [HttpGet("available")]
         public async Task<ActionResult<IEnumerable<Book>>> GetAvailableBooks()

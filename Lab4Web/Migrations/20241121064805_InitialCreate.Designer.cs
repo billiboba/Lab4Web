@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lab4Web.Migrations
 {
     [DbContext(typeof(LibraryContext))]
-    [Migration("20241114170848_InitialCreate")]
+    [Migration("20241121064805_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
